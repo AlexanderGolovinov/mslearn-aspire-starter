@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Http.HttpResults;
+﻿using System.Text;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using eShop.Catalog.API;
@@ -31,13 +32,28 @@ public static class CatalogApi
 
     public static async Task<Results<Ok<PaginatedItems<CatalogItem>>, BadRequest<string>>> GetAllItems(
         [AsParameters] PaginationRequest paginationRequest,
-        [AsParameters] CatalogServices services)
+        [AsParameters] CatalogServices services,
+        RabbitMQ.Client.IConnection connection)
     {
         var pageSize = paginationRequest.PageSize;
         var pageIndex = paginationRequest.PageIndex;
 
         var totalItems = await services.DbContext.CatalogItems
             .LongCountAsync();
+
+        var channel = connection.CreateModel(); //Messaging Channel
+        channel.QueueDeclare(queue: "catalogEvents",
+            durable: false,
+            exclusive: false,
+            autoDelete: false,
+            arguments: null);
+
+        var body = Encoding.UTF8.GetBytes("Getting all items in the catalog.");
+        channel.BasicPublish(exchange: string.Empty,
+            routingKey: "catalogEvents",
+            mandatory: false,
+            basicProperties: null,
+            body: body);
 
         var itemsOnPage = await services.DbContext.CatalogItems
             .OrderBy(c => c.Name)

@@ -8,6 +8,9 @@ var mongo = builder.AddMongoDB("mongo")
   .WithMongoExpress()
   .AddDatabase("BasketDB");
 
+// Messaging Services
+var rabbitmq = builder.AddRabbitMQ("messaging");
+
 // Identity Providers
 
 var idp = builder.AddKeycloakContainer("idp", tag: "23.0")
@@ -21,6 +24,7 @@ builder.AddProject<Projects.Catalog_Data_Manager>("catalog-db-mgr")
 // API Apps
 
 var catalogApi = builder.AddProject<Projects.Catalog_API>("catalog-api")
+    .WithReference(rabbitmq)
     .WithReference(catalogDb);
 
 var basketApi = builder.AddProject<Projects.Basket_API>("basket-api")
@@ -33,6 +37,9 @@ var webApp = builder.AddProject<Projects.WebApp>("webapp", "https")
     .WithReference(catalogApi)
     .WithReference(basketApi)
     .WithReference(idp);
+
+builder.AddProject<Projects.RabbitConsumer>("consumers")
+    .WithReference(rabbitmq);
 
 // Inject the project URLs for Keycloak realm configuration
 idp.WithEnvironment("WEBAPP_HTTP", $"{webApp.GetEndpoint("http")}");
