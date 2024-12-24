@@ -3,6 +3,10 @@ using Projects;
 var builder = DistributedApplication.CreateBuilder(args);
 
 // Databases
+var connectionString = builder.AddConnectionString("localcosmosdb");
+
+var cosmos = builder.AddAzureCosmosDB("cosmos").RunAsEmulator();
+var cosmosdb = cosmos.AddDatabase("catalogcosmosdb");
 
 var postgres = builder.AddPostgres("postgres").WithPgAdmin();
 var catalogDb = postgres.AddDatabase("CatalogDB");
@@ -16,7 +20,9 @@ builder.AddProject<Catalog_Data_Manager>("catalog-db-mgr")
 // API Apps
 
 var catalogApi = builder.AddProject<Catalog_API>("catalog-api")
-    .WithReference(catalogDb);
+    .WithReference(catalogDb)
+    .WithReference(connectionString)
+    .WithReference(cosmosdb);
 
 // Apps
 
